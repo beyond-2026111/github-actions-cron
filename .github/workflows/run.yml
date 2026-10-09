@@ -1,0 +1,44 @@
+name: Scheduled Job
+
+# 触发方式：
+# 1. schedule：定时触发（cron，使用 UTC 时间）
+# 2. workflow_dispatch：手动触发（在 Actions 页面点击 Run workflow）
+on:
+  schedule:
+    # 每天 UTC 0:00 运行 = 北京时间 8:00
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+# 允许工作流向仓库写入内容（用于提交 log.txt）
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: 运行脚本
+        run: python main.py
+
+      - name: 提交运行日志到仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add log.txt
+          # 只有 log.txt 有变化时才提交
+          git diff --cached --quiet || git commit -m "chore: 更新运行日志 $(date -u +%Y-%m-%d)"
+          git push
